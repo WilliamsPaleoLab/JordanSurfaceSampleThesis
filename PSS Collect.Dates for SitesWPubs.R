@@ -16,23 +16,33 @@
 #sites_w_coldat <- neotoma::get_dataset(datasettype = "pollen surface sample",ageold = 0, ageyoung = -60)
 #also trying to get coll date; below lets me see age young and old when i click on it
 #dwndld <- get_download(sites_w_coldat, verbose = TRUE)
+#######################
 
+# Creates sorted collection sites list
+sorted_collection_sites <- sites_w_pubs
 
-#ACTUAL CODE TO USE/THAT WORKS FOLLOWS BELOW
+sorted_sites_NA <- list()
+
 #Getting Collection date 
 CollectionData <- neotoma::get_table('CollectionUnits')
 
 #David - loop below; loop works to add collection date to sites w pubs list
-id_index <- grep("id", sites_w_pubs)
+id_index <- grep("id", sorted_collection_sites)
 for(i in id_index){
-  site_id1 <- sites_w_pubs[[i]]$meta$id
+  site_id1 <- sorted_collection_sites[[i]]$meta$id
   site_collection_date <- CollectionData[site_id1 == CollectionData$SiteID, 9]
   site_data_na_false <- !is.na(site_collection_date)
   final_collect_date <- site_collection_date[site_data_na_false]
   if (is_empty(final_collect_date)) {
     final_collect_date = NA
   }
+  if (length(final_collect_date) >= 2){
+    sort(final_collect_date, decreasing = FALSE)
+    final_collect_date <- final_collect_date[[1]]
+  }
+  sorted_collection_sites[[i]]$meta$collection_date <- final_collect_date
 }
+
 #if (length(currentsite) >= 2) {
     #for (D in length(currentsite))
      #collection_dates <- c(sites_w_pubs, collection_dates) 

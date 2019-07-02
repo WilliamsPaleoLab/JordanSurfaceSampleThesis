@@ -4,8 +4,8 @@ library(purrr)
 
 
 ssamp <- get_dataset(datasettype = "pollen surface sample",
-                     gpid = c("Canada", "United States"))
-sspub <- get_publication(ssamp)
+                     gpid = c("Canada", "United States")) #Gets all pollen surface sample datasets in Canada & US
+sspub <- get_publication(ssamp) #Gets publications for the above datasets 
 
 assertthat::assert_that(length(ssamp) == length(sspub), msg = "There are missing publication objects.")
 
@@ -15,36 +15,33 @@ dsids <- (1:length(ssamp)) %>%
                map(sspub[[x]], function(y) y$meta) %>% bind_rows()) }) %>% 
   bind_rows()
 
-#create list for sites with no publications 
+#Creates list for sites with no publications 
 sites_no_pubs <- list()
 
-#create list for sites with publications
+#Creates list for sites with publications
 sites_w_pubs <- list()
 
-#create list for publications
+#Creates vector for publications
 pub_years  <- vector()
 
+#Loop to sort sites from ones w pubs to ones w no pubs
 for (i in 1:3032){ 
   currentsite <- sspub[[i]]
   if (is.na(currentsite[[1]]$meta$id)){
+    #^^ checks if current site has no publication (by going into metadata), if no pubs, put into list
     sites_no_pubs <- c(sites_no_pubs, currentsite)
   } 
   if(!is.na(currentsite[[1]]$meta$id)) {
-    # Need to sort sites w/ 1 pub from sites w/ 1+ pub
-    # add sites to sites_w_pubs that only have one pub
-    # make new list e.g sites_multi_pubs
-    # add sites w/ 1+ pubs to sites_multi_pubs
-    # for sites_multi_pubs, need to keep oldest
-    # to keep oldest, go into metadata and look at years
-    # so, smaller# pub will be oldest
-    # when finished sorting, get 2 lists:
-      #1) sites with one pub & year 
-      #2) sites w/ multi pubs & oldest pub, and
+    # If site does have publication (!is.na - if it does), follows loop below 
+    # Checks if site has only 1 pub, then put into list - sites_w_pubs
     if(length(currentsite) == 1){
       site_id <- as.numeric(names(sspub[i]))
       currentsite[[1]]$meta$dataset.id <- site_id
       sites_w_pubs <- c(sites_w_pubs, currentsite)
     }
+    # If site has 2 or more pubs, loop checks which publication is older 
+    # By looking at metadata, then, if checks for the oldest pub to keep 
+    # And put into sites_w_pubs list so each site has the oldest pub
     if(length(currentsite) >= 2) {
       for(P in length(currentsite)){
         currentpub_year <- currentsite[[P]]$meta$year

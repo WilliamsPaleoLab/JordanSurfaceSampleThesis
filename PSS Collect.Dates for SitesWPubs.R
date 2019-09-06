@@ -1,16 +1,3 @@
-#if use simons code, look in ssamp: submission data and also dataset.meta has some 
-#collection data (if there is any)
-
-#to sort sites with collection dates and sites without, but doesn't work; returns error of argument length 0
-#for (i in 1:3032){
-  #currentsite <- ssamp[[i]]
-  #if(is.na(currentsite[[1]]$meta.ageold)) {
-    #sites_no_coldat <- c(sites_no_coldat, currentsite)
-  #}
-  #if(!is.na(currentsite[[1]]$meta.ageold)) {
-   # sites_w_coldat <- c(sites_w_coldat, currentsite)
-#  }
-#}
 
 #i think works when don't have gpid in there, so would just need to filter out to get us and canda somehow?
 #sites_w_coldat <- neotoma::get_dataset(datasettype = "pollen surface sample",ageold = 0, ageyoung = -60)
@@ -58,4 +45,4 @@ for(i in id_index){
     #}
  #}
 #}
-  #sort smallest using other sort example in simonfixbadcode file
+

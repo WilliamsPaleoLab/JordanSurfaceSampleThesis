@@ -62,10 +62,16 @@ for (i in 1:3032){
   }
 }
 
+for(N in 3032) {
+  sitename <- ssamp[[N]]
+  if (!is.na(sitename[[1]]$'site.data'$'site.name'))
+    ss.site.names <- c(ss.site.names, sitename)
+ }
+
+#writes ssamp printed to a txt file
+options(max.print = 10000)
+sink("output.txt")
+print(ssamp)
+sink()
 
 
-    site_id <- as.numeric(names(sspub[i]))
-    currentsite[[1]]$meta$dataset.id <- site_id
-    sites_w_pubs <- c(sites_w_pubs, currentsite)
-
-#added the site_id and site_info lines into loop to help connect it to Collection Data - dates

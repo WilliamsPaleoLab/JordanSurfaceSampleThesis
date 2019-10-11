@@ -19,7 +19,7 @@ deepfal_pollen <- deepfal_data[[1]]
 library(raster)
 
 #read sites temp data.csv back into R
-sites.temperatures <- read.csv("PSS Sites Temp Data.csv", header=TRUE, row.names=1, sep=",", check.names=FALSE) # Mean monthly temperature)
+sites.temperatures <- read.csv(file = "PSS Sites Temp Data.csv", header=TRUE, row.names=1, sep=",", check.names=FALSE) # Mean monthly temperature)
 
 sites.temps <- sites.temperatures[,601:1380] #1951Jan-2015Dec
 #not sure if these next 2 lines are needed
@@ -65,7 +65,7 @@ tempavg51.80 <- all.temp.data$tavg51.80
 tempavg86.15 <- all.temp.data$tavg.86.15
 
 #Read surface sample data in 
-surfacesamples <- read.csv("Documents/actual modern pollen data.csv")[,1:4]
+surfacesamples <- read.csv("actual modern pollen data.csv")[,1:4]
 #Download dataset info i.e. taxa counts whatever 
 ss.downloaded <- neotoma::get_download(surfacesamples[,1])
 clean.surfacesamples <- compile_taxa(ss.downloaded, list.name = "WS64")
@@ -81,7 +81,7 @@ mod.pollen <- as.data.frame(mod.pollen)
 mod.clim <- as.data.frame(mod.clim)
 colnames(mod.clim) <- c("site.name", "lat", "long", "51.80", "86.15") #what we want row names of mod clim to be
 alt.table <- read.csv("Downloads/poll_temps/alt_table.csv", stringsAsFactors = FALSE)
-colnames(mod.pollen) <- sort(c(unique(alt.table$WS64), "Other"))[-10] #[-10] gets rid of misspelled asteraceae
+colnames(mod.pollen) <- sort(c(unique(alt.table$WS64, "Other"))) #[-10] #[-10] gets rid of misspelled asteraceae
 
 #make a loop to basically import data into the empty matrices
 i=1
@@ -119,17 +119,15 @@ mod.data[,6:69] <- (mod.data[,6:69]/rowSums(mod.data[,6:69])) * 100
 #First build model then predict temps
 
 #model for MAT 51.80
-mat.51.80 <- rioja::MAT(y = mod.data[,6:69], x = mod.data$`51.80`, dist.method = "sq.chord", k = 5, lean = FALSE)
+mat.51.80 <- rioja::MAT(y = mod.data[,6:42], x = mod.data$`51.80`, dist.method = "sq.chord", k = 5, lean = FALSE)
 cross.51.80 <- rioja::crossval(mat.51.80, cv.method = "boot", nboot = 100)
 deepfal.temp.51.80 <- predict(cross.51.80, newdata = deepfal_counts_final)
-
 MAT.ts.51.80 <- plot(deepfal_pollen[2]$sample.meta$age, deepfal.temp.51.80$fit[,1], type = "o", main = 'MAT 1951-1980', xlab = "Ages", ylab = "Predicted Temps")
 
 #Model for MAT 86.15
-mat.86.15 <- rioja::MAT(y = mod.data[,6:69], x = mod.data$`86.15`, dist.method = "sq.chord", k = 5, lean = FALSE)
+mat.86.15 <- rioja::MAT(y = mod.data[,6:42], x = mod.data$`86.15`, dist.method = "sq.chord", k = 5, lean = FALSE)
 cross.86.15 <- rioja::crossval(mat.86.15, cv.method = "boot", nboot = 100)
 deepfal.temp.86.15 <- predict(cross.86.15, newdata = deepfal_counts_final)
-
 MAT.ts.86.15 <- plot(deepfal_pollen[2]$sample.meta$age, deepfal.temp.86.15$fit[,1], type = "o", main = 'MAT 1986-2015', xlab = "Ages", ylab = "Predicted Temps (˚Celsius)")
 
 #Model for WA 51.80
@@ -156,3 +154,74 @@ cross.wapls.86.15 <- rioja::crossval(wapls.86.15, cv.methods = "boot", nboot = 1
 wapls.deepfal.temp86.15 <- predict(cross.wapls.86.15, newdata = deepfal_counts_final)
 WAPLS.ts.86.15 <- plot(deepfal_pollen[2]$sample.meta$age, wapls.deepfal.temp86.15$fit[,1], type = "o", main = 'WAPLS 1986-2015', xlab = 'Ages', ylab = 'Predicted Temps')
 
+
+#data frame to compare model temps
+mat.temps.86.15 <- deepfal.temp.86.15$fit[,1]
+mat.temps.51.80 <- deepfal.temp.51.80$fit[,1]
+wapls.temps.51.80 <- wapls.deepfal.temp51.80$fit[,1]
+wapls.temps.86.15 <- wapls.deepfal.temp86.15$fit[,1]
+wa.temps.51.80 <- wa.deepfal.temp.51.80$fit[,1]
+wa.temps.86.15 <- wa.deepfal.temp.86.15$fit[,1]
+deepfal.times <- deepfal_pollen[2]$sample.meta$age
+deepfaltimetemps <- matrix(c(deepfal.times, mat.temps.51.80 ,mat.temps.86.15, 
+                            wapls.temps.51.80, wapls.temps.86.15, wa.temps.51.80, 
+                            wa.temps.86.15), nrow = 191, ncol = 7)
+deepfal.data <- as.data.frame(deepfaltimetemps)
+deepfal.data <- setNames(deepfal.data, c("Time", "MAT5180", "MAT 86-15", "WAPLS 51-80", "WAPLS 86-15", "WA5180", "WA 86-15"))
+
+#Deepfal Scatter Plots 
+
+library(ggplot2)
+#MAT vs WA 1951-1980 Temps
+ggplot(deepfal.data, aes(x=mat.temps.51.80, y=wa.temps.51.80)) + geom_point() + 
+  geom_smooth(method = lm) + 
+  labs(title="MAT vs WA 1951-1980",
+       x="MAT Temps", y = "WA Temps")
+
+#MAT vs WAPLS 1951-1980 Temps
+ggplot(deepfal.data, aes(x=mat.temps.51.80, y=wapls.temps.51.80)) + geom_point() + 
+  geom_smooth(method = lm) + 
+  labs(title="MAT vs WAPLS 1951-1980",
+       x="MAT Temps", y = "WAPLS Temps")
+
+#WA vs WAPLS 1951-1980 Temps
+ggplot(deepfal.data, aes(x=wapls.temps.51.80, y=wa.temps.51.80)) + geom_point() + 
+  geom_smooth(method = lm) + 
+  labs(title="WAPLS vs WA 1951-1980",
+       x="WAPLS Temps", y = "WA Temps")
+
+#MAT vs WA 1986-2015 Temps
+ggplot(deepfal.data, aes(x=mat.temps.86.15, y=wa.temps.86.15)) + geom_point() + 
+  geom_smooth(method = lm) + 
+  labs(title="MAT vs WA 1986-2015",
+       x="MAT Temps", y = "WA Temps")
+
+#MAT vs WAPLS 1986-2015 Temps
+ggplot(deepfal.data, aes(x=mat.temps.86.15, y=wapls.temps.86.15)) + geom_point() + 
+  geom_smooth(method = lm) + 
+  labs(title="MAT vs WAPLS 1986-2015",
+       x="MAT Temps", y = "WAPLS Temps")
+
+#WA vs WAPLS 1986-2015
+ggplot(deepfal.data, aes(x=wapls.temps.86.15, y=wa.temps.86.15)) + geom_point() + 
+  geom_smooth(method = lm) + 
+  labs(title="WAPLS vs WA 1986-2015",
+       x="WAPLS Temps", y = "WA Temps")
+
+#WA 1951-1980 vs WA 1986-2015 
+ggplot(deepfal.data, aes(x=wa.temps.51.80, y=wa.temps.86.15)) + geom_point() + 
+  geom_smooth(method = lm) + 
+  labs(title="WA 51-80 vs WA 86-15",
+       x="WA 51.80 Temps", y = "WA 86.15 Temps")
+
+#WAPLS 1951-1980 vs WAPLS 1986-2015
+ggplot(deepfal.data, aes(x=wapls.temps.51.80, y=wapls.temps.86.15)) + geom_point() + 
+  geom_smooth(method = lm) + 
+  labs(title="WAPLS 51-80 vs WAPLS 86-15",
+       x="WAPLS 51.80 Temps", y = "WAPLS 86.15 Temps")
+
+#MAT 1951-1980 vs MAT 1986-2015 
+ggplot(deepfal.data, aes(x=mat.temps.51.80, y=mat.temps.86.15)) + geom_point() + 
+  geom_smooth(method = lm) + 
+  labs(title="MAT 51-80 vs MAT 86-15",
+       x="MAT 51.80 Temps", y = "MAT 86.15 Temps")

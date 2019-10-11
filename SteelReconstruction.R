@@ -55,7 +55,7 @@ tavg51.80 <- rowMeans(sites.temps[,1:360])
 tavg.86.15 <- rowMeans(sites.temps[,421:780])
 
 #Creates data frame with necessary info
-all.temp.data <- data.frame(sites[,0:2], tjan51.80$Jan51.80mean,
+all.temp.data <- data.frame(tjan51.80$Jan51.80mean,
                             tjan86.15$Jan86.15mean, tjul51.80$Jul51.80mean,
                             tjul86.15$Jul86.15mean, tavg, tavg51.80, tavg.86.15)
 
@@ -79,7 +79,8 @@ mod.clim <- matrix(ncol = 5, #climate matrix
 mod.pollen <- as.data.frame(mod.pollen)
 mod.clim <- as.data.frame(mod.clim)
 colnames(mod.clim) <- c("site.name", "lat", "long", "51.80", "86.15") #what we want row names of mod clim to be
-colnames(mod.pollen) <- sort(c(unique(alt.table$WS64), "Other"))[-10] #gets rid of 'other' taxa(?)
+alt.table <- read.csv("Downloads/poll_temps/alt_table.csv", stringsAsFactors = FALSE)
+colnames(mod.pollen) <- sort(c(unique(alt.table$WS64), "Other")) #[-10] #gets rid of 'other' taxa(?)
 
 #make a loop to basically import data into the empty matrices
 i=1
@@ -110,9 +111,6 @@ steel_counts_clean <- replace(steel_counts, is.na(steel_counts), 0)
 steel_counts_final <- steel_counts_clean[,c(-23)]
 steel_counts_final <- (steel_counts_final/rowSums(steel_counts_final)) * 100
 
-# Subsets modern pollen data with list of species in Steel dataset
-Pollen_counts <- Pollen[which(colnames(Pollen_corrected) %in% colnames(steel_counts_clean))]
-
 # Calculates pollen percentages for modern pollen sites 
 #Not sure if need this --> Pollen_percentages <- 100*(Pollen_counts/rowSums(Pollen_counts))
 mod.data[,6:69] <- (mod.data[,6:69]/rowSums(mod.data[,6:69])) * 100
@@ -120,39 +118,37 @@ mod.data[,6:69] <- (mod.data[,6:69]/rowSums(mod.data[,6:69])) * 100
 #First build model then predict temps
 
 #model for MAT 51.80
-mat.51.80 <- rioja::MAT(y = mod.data[,6:69], x = mod.data$`51.80`, dist.method = "sq.chord", k = 5, lean = FALSE)
+mat.51.80 <- rioja::MAT(y = mod.data[,6:42], x = mod.data$`51.80`, dist.method = "sq.chord", k = 5, lean = FALSE)
 cross.51.80 <- rioja::crossval(mat.51.80, cv.method = "boot", nboot = 100)
 steel.temp.51.80 <- predict(cross.51.80, newdata = steel_counts_final)
-
 MAT.ts.51.80 <- plot(steel_pollen[2]$sample.meta$age, steel.temp.51.80$fit[,1], type = "o", main = 'MAT 1951-1980', xlab = "Ages", ylab = "Predicted Temps")
 
 #Model for MAT 86.15
-mat.86.15 <- rioja::MAT(y = mod.data[,6:69], x = mod.data$`86.15`, dist.method = "sq.chord", k = 5, lean = FALSE)
+mat.86.15 <- rioja::MAT(y = mod.data[,6:42], x = mod.data$`86.15`, dist.method = "sq.chord", k = 5, lean = FALSE)
 cross.86.15 <- rioja::crossval(mat.86.15, cv.method = "boot", nboot = 100)
 steel.temp.86.15 <- predict(cross.86.15, newdata = steel_counts_final)
-
 MAT.ts.86.15 <- plot(steel_pollen[2]$sample.meta$age, steel.temp.86.15$fit[,1], type = "o", main = 'MAT 1986-2015', xlab = "Ages", ylab = "Predicted Temps (˚Celsius)")
 
 #Model for WA 51.80
-wa.51.80 <- rioja::WA(y = mod.data[,6:37], x = mod.data$`51.80`, lean = FALSE) # has to be 6:37 otherwise get error about species data have 0 abundances for following columns
+wa.51.80 <- rioja::WA(y = mod.data[,6:42], x = mod.data$`51.80`, lean = FALSE) # has to be 6:37 otherwise get error about species data have 0 abundances for following columns
 cross.wa.51.80 <- rioja::crossval(wa.51.80, cv.method = "boot", nboot = 100)
 wa.steel.temp.51.80 <- predict(cross.wa.51.80, newdata = steel_counts_final)
 WA.ts.51.80 <- plot(steel_pollen[2]$sample.meta$age, wa.steel.temp.51.80$fit[,1], type = "o", main = 'WA 1951-1980', xlab = "Ages", ylab = "Predicted Temps")
 
 #Model for WA 86.15
-wa.86.15 <- rioja::WA(y = mod.data[,6:37], x = mod.data$`86.15`, lean = FALSE)
+wa.86.15 <- rioja::WA(y = mod.data[,6:42], x = mod.data$`86.15`, lean = FALSE)
 cross.wa.86.15 <- rioja::crossval(wa.86.15, cv.methods = "boot", nboot = 100)
 wa.steel.temp.86.15 <- predict(cross.wa.86.15, newdata= steel_counts_final)
 WA.ts.86.15 <- plot(steel_pollen[2]$sample.meta$age, wa.steel.temp.86.15$fit[,1], type = "o", main = 'WA 1986-2015', xlab = "Ages", ylab = "Predicted Temps")
 
 #Model for WAPLS 51.80
-wapls.51.80 <- rioja::WAPLS(y = mod.data[,6:37], x = mod.data$`51.80`, lean = FALSE)
+wapls.51.80 <- rioja::WAPLS(y = mod.data[,6:42], x = mod.data$`51.80`, lean = FALSE)
 cross.wapls.51.80 <- rioja::crossval(wapls.51.80, cv.methods = "boot", nboot = 100)
 wapls.steel.temp51.80 <- predict(cross.wapls.51.80, newdata = steel_counts_final)
 WAPLS.ts.51.80 <- plot(steel_pollen[2]$sample.meta$age, wapls.steel.temp51.80$fit[,1], type = "o", main = 'WAPLS 1951-1980', xlab = 'Ages', ylab = 'Predicted Temps')
 
 #Model for WAPLS 86.15
-wapls.86.15 <- rioja::WAPLS(y=mod.data[,6:37], x = mod.data$`86.15`, lean = FALSE)
+wapls.86.15 <- rioja::WAPLS(y=mod.data[,6:42], x = mod.data$`86.15`, lean = FALSE)
 cross.wapls.86.15 <- rioja::crossval(wapls.86.15, cv.methods = "boot", nboot = 100)
 wapls.steel.temp86.15 <- predict(cross.wapls.86.15, newdata = steel_counts_final)
 WAPLS.ts.86.15 <- plot(steel_pollen[2]$sample.meta$age, wapls.steel.temp86.15$fit[,1], type = "o", main = 'WAPLS 1986-2015', xlab = 'Ages', ylab = 'Predicted Temps')
@@ -160,27 +156,94 @@ WAPLS.ts.86.15 <- plot(steel_pollen[2]$sample.meta$age, wapls.steel.temp86.15$fi
 
 
 
+# #use square root pollen percentages for each model(TF)???????
+# #keep Pollen_percentages where it is 
+# # Runs MAT on modern pollen percentages and 1951-80 30-year mean
+# MAT.tempavg51.80 <- rioja::MAT(Pollen_percentages, tempavg51.80, lean = FALSE)
+# # Plots MAT results
+# plot(MAT.tempavg51.80)
+# # cross-validates the MAT using the leave-one-out technique
+# cv.tempavg51.80.mat.model <- rioja::crossval(MAT.tempavg51.80, cv.method='lgo', verbose=FALSE)
+# plot(cv.tempavg51.80.mat.model)
+# 
+# 
+# # Runs MAT on modern pollen percentages and 1986-2015 30-year mean
+# MAT.tempavg86.15 <- rioja::MAT(Pollen_percentages, tempavg86.15, lean = FALSE)
+# # Plots MAT results
+# plot(MAT.tempavg86.15)
+# # cross-validates the MAT using the leave-one-out technique
+# cv.tempavg86.15.mat.model <- rioja::crossval(MAT.tempavg86.15, cv.method='lgo', verbose=FALSE)
+# plot(cv.tempavg86.15.mat.model)
 
 
 
+#data frame to compare model temps
+mat.temps.86.15 <- steel.temp.86.15$fit[,1]
+mat.temps.51.80 <- steel.temp.51.80$fit[,1]
+wapls.temps.51.80 <- wapls.steel.temp51.80$fit[,1]
+wapls.temps.86.15 <- wapls.steel.temp86.15$fit[,1]
+wa.temps.51.80 <- wa.steel.temp.51.80$fit[,1]
+wa.temps.86.15 <- wa.steel.temp.86.15$fit[,1]
+steel.times <- steel_pollen[2]$sample.meta$age
+steeltimetemps <- matrix(c(steel.times, mat.temps.51.80 ,mat.temps.86.15, wapls.temps.51.80, wapls.temps.86.15, wa.temps.51.80, wa.temps.86.15), nrow = 125, ncol = 7)
+steel.data <- as.data.frame(steeltimetemps)
+steel.data <- setNames(steel.data, c("Time", "MAT5180", "MAT 86-15", "WAPLS 51-80", "WAPLS 86-15", "WA5180", "WA 86-15"))
 
-#use square root pollen percentages for each model(TF)???????
-#keep Pollen_percentages where it is 
-# Runs MAT on modern pollen percentages and 1951-80 30-year mean
-MAT.tempavg51.80 <- rioja::MAT(Pollen_percentages, tempavg51.80, lean = FALSE)
-# Plots MAT results
-plot(MAT.tempavg51.80)
-# cross-validates the MAT using the leave-one-out technique
-cv.tempavg51.80.mat.model <- rioja::crossval(MAT.tempavg51.80, cv.method='lgo', verbose=FALSE)
-plot(cv.tempavg51.80.mat.model)
+#Steel Lake Scatter Plots 
 
+library(ggplot2)
+#MAT vs WA 1951-1980 Temps
+ggplot(steel.data, aes(x=mat.temps.51.80, y=wa.temps.51.80)) + geom_point() + 
+  geom_smooth(method = lm) + 
+  labs(title="MAT vs WA 1951-1980",
+       x="MAT Temps", y = "WA Temps")
 
-# Runs MAT on modern pollen percentages and 1986-2015 30-year mean
-MAT.tempavg86.15 <- rioja::MAT(Pollen_percentages, tempavg86.15, lean = FALSE)
-# Plots MAT results
-plot(MAT.tempavg86.15)
-# cross-validates the MAT using the leave-one-out technique
-cv.tempavg86.15.mat.model <- rioja::crossval(MAT.tempavg86.15, cv.method='lgo', verbose=FALSE)
-plot(cv.tempavg86.15.mat.model)
+#MAT vs WAPLS 1951-1980 Temps
+ggplot(steel.data, aes(x=mat.temps.51.80, y=wapls.temps.51.80)) + geom_point() + 
+  geom_smooth(method = lm) + 
+  labs(title="MAT vs WAPLS 1951-1980",
+       x="MAT Temps", y = "WAPLS Temps")
+
+#WA vs WAPLS 1951-1980 Temps
+ggplot(steel.data, aes(x=wapls.temps.51.80, y=wa.temps.51.80)) + geom_point() + 
+  geom_smooth(method = lm) + 
+  labs(title="WAPLS vs WA 1951-1980",
+       x="WAPLS Temps", y = "WA Temps")
+
+#MAT vs WA 1986-2015 Temps
+ggplot(steel.data, aes(x=mat.temps.86.15, y=wa.temps.86.15)) + geom_point() + 
+  geom_smooth(method = lm) + 
+  labs(title="MAT vs WA 1986-2015",
+       x="MAT Temps", y = "WA Temps")
+
+#MAT vs WAPLS 1986-2015 Temps
+ggplot(steel.data, aes(x=mat.temps.86.15, y=wapls.temps.86.15)) + geom_point() + 
+  geom_smooth(method = lm) + 
+  labs(title="MAT vs WAPLS 1986-2015",
+       x="MAT Temps", y = "WAPLS Temps")
+
+#WA vs WAPLS 1986-2015
+ggplot(steel.data, aes(x=wapls.temps.86.15, y=wa.temps.86.15)) + geom_point() + 
+  geom_smooth(method = lm) + 
+  labs(title="WAPLS vs WA 1986-2015",
+       x="WAPLS Temps", y = "WA Temps")
+
+#WA 1951-1980 vs WA 1986-2015 
+ggplot(steel.data, aes(x=wa.temps.51.80, y=wa.temps.86.15)) + geom_point() + 
+  geom_smooth(method = lm) + 
+  labs(title="WA 51-80 vs WA 86-15",
+       x="WA 51.80 Temps", y = "WA 86.15 Temps")
+
+#WAPLS 1951-1980 vs WAPLS 1986-2015
+ggplot(steel.data, aes(x=wapls.temps.51.80, y=wapls.temps.86.15)) + geom_point() + 
+  geom_smooth(method = lm) + 
+  labs(title="WAPLS 51-80 vs WAPLS 86-15",
+       x="WAPLS 51.80 Temps", y = "WAPLS 86.15 Temps")
+
+#MAT 1951-1980 vs MAT 1986-2015 
+ggplot(steel.data, aes(x=mat.temps.51.80, y=mat.temps.86.15)) + geom_point() + 
+  geom_smooth(method = lm) + 
+  labs(title="MAT 51-80 vs MAT 86-15",
+       x="MAT 51.80 Temps", y = "MAT 86.15 Temps")
 
 

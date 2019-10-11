@@ -81,7 +81,8 @@ mod.pollen <- as.data.frame(mod.pollen)
 mod.clim <- as.data.frame(mod.clim)
 colnames(mod.clim) <- c("site.name", "lat", "long", "51.80", "86.15") #what we want row names of mod clim to be
 alt.table <- read.csv("Downloads/poll_temps/alt_table.csv", stringsAsFactors = FALSE)
-colnames(mod.pollen) <- sort(c(unique(alt.table$WS64), "Other"))[-10] #[-10] gets rid of misspelled asteraceae
+colnames(mod.pollen) <- sort(c(unique(alt.table$WS64), "Other")) #[-10] gets rid of misspelled asteraceae; update 9/13 - since
+#have corrected taxa tables, I don't think [-10] is necessary anymore
 
 #make a loop to basically import data into the empty matrices
 i=1
@@ -103,7 +104,7 @@ mod.data <- cbind(mod.clim, mod.pollen)
 mod.data[is.na(mod.data)] <- 0 #set na values to 0
 mod.data <- mod.data[,-grep("Other", names(mod.data))] #removes "other" from df
 
-# Compiles steel pollen data with Williams & Shuman 2008 taxa list
+# Compiles crystal pollen data with Williams & Shuman 2008 taxa list
 crystal_pollen_clean <- compile_taxa(crystal_pollen, list.name = "WS64")
 
 # Cleans counts & gives us percentages for historic site
@@ -119,13 +120,13 @@ mod.data[,6:69] <- (mod.data[,6:69]/rowSums(mod.data[,6:69])) * 100
 #First build model then predict temps
 
 #model for MAT 51.80
-mat.51.80 <- rioja::MAT(y = mod.data[,6:69], x = mod.data$`51.80`, dist.method = "sq.chord", k = 5, lean = FALSE)
+mat.51.80 <- rioja::MAT(y = mod.data[,6:42], x = mod.data$`51.80`, dist.method = "sq.chord", k = 5, lean = FALSE)
 cross.51.80 <- rioja::crossval(mat.51.80, cv.method = "boot", nboot = 100)
 crystal.temp.51.80 <- predict(cross.51.80, newdata = crystal_counts_final)
 MAT.ts.51.80 <- plot(crystal_pollen[2]$sample.meta$age, crystal.temp.51.80$fit[,1], type = "o", main = 'MAT 1951-1980', xlab = "Ages", ylab = "Predicted Temps")
 
 #Model for MAT 86.15
-mat.86.15 <- rioja::MAT(y = mod.data[,6:69], x = mod.data$`86.15`, dist.method = "sq.chord", k = 5, lean = FALSE)
+mat.86.15 <- rioja::MAT(y = mod.data[,6:42], x = mod.data$`86.15`, dist.method = "sq.chord", k = 5, lean = FALSE)
 cross.86.15 <- rioja::crossval(mat.86.15, cv.method = "boot", nboot = 100)
 crystal.temp.86.15 <- predict(cross.86.15, newdata = crystal_counts_final)
 MAT.ts.86.15 <- plot(crystal_pollen[2]$sample.meta$age,crystal.temp.86.15$fit[,1], type = "o", main = 'MAT 1986-2015', xlab = "Ages", ylab = "Predicted Temps (˚Celsius)")
@@ -154,18 +155,72 @@ cross.wapls.86.15 <- rioja::crossval(wapls.86.15, cv.methods = "boot", nboot = 1
 wapls.crystal.temp86.15 <- predict(cross.wapls.86.15, newdata = crystal_counts_final)
 WAPLS.ts.86.15 <- plot(crystal_pollen[2]$sample.meta$age, wapls.crystal.temp86.15$fit[,1], type = "o", main = 'WAPLS 1986-2015', xlab = 'Ages', ylab = 'Predicted Temps')
 
+#data frame to compare model temps
+mat.temps.86.15 <- crystal.temp.86.15$fit[,1]
+mat.temps.51.80 <- crystal.temp.51.80$fit[,1]
+wapls.temps.51.80 <- wapls.crystal.temp51.80$fit[,1]
+wapls.temps.86.15 <- wapls.crystal.temp86.15$fit[,1]
+wa.temps.51.80 <- wa.crystal.temp.51.80$fit[,1]
+wa.temps.86.15 <- wa.crystal.temp.86.15$fit[,1]
+crystal.times <- crystal_pollen[2]$sample.meta$age
+crystaltimetemps <- matrix(c(crystal.times, mat.temps.51.80 ,mat.temps.86.15, wapls.temps.51.80, wapls.temps.86.15, wa.temps.51.80, wa.temps.86.15), nrow = 135, ncol = 7)
+crystal.data <- as.data.frame(crystaltimetemps)
+crystal.data <- setNames(crystal.data, c("Time", "MAT5180", "MAT 86-15", "WAPLS 51-80", "WAPLS 86-15", "WA5180", "WA 86-15"))
 
-#### MAT run with 6:42 intead of 6:69 
-#model for MAT 51.80
-v2.mat.51.80 <- rioja::MAT(y = mod.data[,6:42], x = mod.data$`51.80`, dist.method = "sq.chord", k = 5, lean = FALSE)
-v2.cross.51.80 <- rioja::crossval(v2.mat.51.80, cv.method = "boot", nboot = 100)
-v2.crystal.temp.51.80 <- predict(v2.cross.51.80, newdata = crystal_counts_final)
-v2.MAT.ts.51.80 <- plot(crystal_pollen[2]$sample.meta$age, v2.crystal.temp.51.80$fit[,1], type = "o", main = 'V2 MAT 1951-1980', xlab = "Ages", ylab = "Predicted Temps")
+#Crystal Scatter Plots 
 
-#Model for MAT 86.15
-v2.mat.86.15 <- rioja::MAT(y = mod.data[,6:42], x = mod.data$`86.15`, dist.method = "sq.chord", k = 5, lean = FALSE)
-v2.cross.86.15 <- rioja::crossval(v2.mat.86.15, cv.method = "boot", nboot = 100)
-v2.crystal.temp.86.15 <- predict(v2.cross.86.15, newdata = crystal_counts_final)
-v2.MAT.ts.86.15 <- plot(crystal_pollen[2]$sample.meta$age, v2.crystal.temp.86.15$fit[,1], type = "o", main = 'V2 MAT 1986-2015', xlab = "Ages", ylab = "Predicted Temps")
+library(ggplot2)
+#MAT vs WA 1951-1980 Temps
+ggplot(crystal.data, aes(x=mat.temps.51.80, y=wa.temps.51.80)) + geom_point() + 
+  geom_smooth(method = lm) + 
+  labs(title="MAT vs WA 1951-1980",
+       x="MAT Temps", y = "WA Temps")
 
+#MAT vs WAPLS 1951-1980 Temps
+ggplot(crystal.data, aes(x=mat.temps.51.80, y=wapls.temps.51.80)) + geom_point() + 
+  geom_smooth(method = lm) + 
+  labs(title="MAT vs WAPLS 1951-1980",
+       x="MAT Temps", y = "WAPLS Temps")
+
+#WA vs WAPLS 1951-1980 Temps
+ggplot(crystal.data, aes(x=wapls.temps.51.80, y=wa.temps.51.80)) + geom_point() + 
+  geom_smooth(method = lm) + 
+  labs(title="WAPLS vs WA 1951-1980",
+       x="WAPLS Temps", y = "WA Temps")
+
+#MAT vs WA 1986-2015 Temps
+ggplot(crystal.data, aes(x=mat.temps.86.15, y=wa.temps.86.15)) + geom_point() + 
+  geom_smooth(method = lm) + 
+  labs(title="MAT vs WA 1986-2015",
+       x="MAT Temps", y = "WA Temps")
+
+#MAT vs WAPLS 1986-2015 Temps
+ggplot(crystal.data, aes(x=mat.temps.86.15, y=wapls.temps.86.15)) + geom_point() + 
+  geom_smooth(method = lm) + 
+  labs(title="MAT vs WAPLS 1986-2015",
+       x="MAT Temps", y = "WAPLS Temps")
+
+#WA vs WAPLS 1986-2015
+ggplot(crystal.data, aes(x=wapls.temps.86.15, y=wa.temps.86.15)) + geom_point() + 
+  geom_smooth(method = lm) + 
+  labs(title="WAPLS vs WA 1986-2015",
+       x="WAPLS Temps", y = "WA Temps")
+
+#WA 1951-1980 vs WA 1986-2015 
+ggplot(crystal.data, aes(x=wa.temps.51.80, y=wa.temps.86.15)) + geom_point() + 
+  geom_smooth(method = lm) + 
+  labs(title="WA 51-80 vs WA 86-15",
+       x="WA 51.80 Temps", y = "WA 86.15 Temps")
+
+#WAPLS 1951-1980 vs WAPLS 1986-2015
+ggplot(crystal.data, aes(x=wapls.temps.51.80, y=wapls.temps.86.15)) + geom_point() + 
+  geom_smooth(method = lm) + 
+  labs(title="WAPLS 51-80 vs WAPLS 86-15",
+       x="WAPLS 51.80 Temps", y = "WAPLS 86.15 Temps")
+
+#MAT 1951-1980 vs MAT 1986-2015 
+ggplot(crystal.data, aes(x=mat.temps.51.80, y=mat.temps.86.15)) + geom_point() + 
+  geom_smooth(method = lm) + 
+  labs(title="MAT 51-80 vs MAT 86-15",
+       x="MAT 51.80 Temps", y = "MAT 86.15 Temps")
 

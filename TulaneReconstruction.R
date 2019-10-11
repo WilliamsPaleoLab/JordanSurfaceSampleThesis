@@ -81,7 +81,7 @@ mod.pollen <- as.data.frame(mod.pollen)
 mod.clim <- as.data.frame(mod.clim)
 colnames(mod.clim) <- c("site.name", "lat", "long", "51.80", "86.15") #what we want row names of mod clim to be
 alt.table <- read.csv("Downloads/poll_temps/alt_table.csv", stringsAsFactors = FALSE)
-colnames(mod.pollen) <- sort(c(unique(alt.table$WS64), "Other"))[-10] #[-10] gets rid of misspelled asteraceae
+colnames(mod.pollen) <- sort(c(unique(alt.table$WS64), "Other")) 
 
 #make a loop to basically import data into the empty matrices
 i=1
@@ -103,7 +103,7 @@ mod.data <- cbind(mod.clim, mod.pollen)
 mod.data[is.na(mod.data)] <- 0 #set na values to 0
 mod.data <- mod.data[,-grep("Other", names(mod.data))] #removes "other" from df
 
-# Compiles steel pollen data with Williams & Shuman 2008 taxa list
+# Compiles tulane pollen data with Williams & Shuman 2008 taxa list
 tulane_pollen_clean <- compile_taxa(tulane_pollen, list.name = "WS64")
 
 # Cleans counts & gives us percentages for historic site
@@ -112,9 +112,6 @@ tulane_counts_clean <- replace(tulane_counts, is.na(tulane_counts), 0)
 tulane_counts_final <- tulane_counts_clean[,c(-26)]
 tulane_counts_final <- (tulane_counts_final/rowSums(tulane_counts_final)) * 100
 
-# Subsets modern pollen data with list of species in Steel dataset
-Pollen_counts <- Pollen[which(colnames(Pollen_corrected) %in% colnames(tulane_counts_clean))]
-
 # Calculates pollen percentages for modern pollen sites 
 #Not sure if need this --> Pollen_percentages <- 100*(Pollen_counts/rowSums(Pollen_counts))
 mod.data[,6:69] <- (mod.data[,6:69]/rowSums(mod.data[,6:69])) * 100
@@ -122,17 +119,15 @@ mod.data[,6:69] <- (mod.data[,6:69]/rowSums(mod.data[,6:69])) * 100
 #First build model then predict temps
 
 #model for MAT 51.80
-mat.51.80 <- rioja::MAT(y = mod.data[,6:69], x = mod.data$`51.80`, dist.method = "sq.chord", k = 5, lean = FALSE)
+mat.51.80 <- rioja::MAT(y = mod.data[,6:42], x = mod.data$`51.80`, dist.method = "sq.chord", k = 5, lean = FALSE)
 cross.51.80 <- rioja::crossval(mat.51.80, cv.method = "boot", nboot = 100)
 tulane.temp.51.80 <- predict(cross.51.80, newdata = tulane_counts_final)
-
 MAT.ts.51.80 <- plot(tulane_pollen[2]$sample.meta$age, tulane.temp.51.80$fit[,1], type = "o", main = 'MAT 1951-1980', xlab = "Ages", ylab = "Predicted Temps")
 
 #Model for MAT 86.15
-mat.86.15 <- rioja::MAT(y = mod.data[,6:69], x = mod.data$`86.15`, dist.method = "sq.chord", k = 5, lean = FALSE)
+mat.86.15 <- rioja::MAT(y = mod.data[,6:42], x = mod.data$`86.15`, dist.method = "sq.chord", k = 5, lean = FALSE)
 cross.86.15 <- rioja::crossval(mat.86.15, cv.method = "boot", nboot = 100)
 tulane.temp.86.15 <- predict(cross.86.15, newdata = tulane_counts_final)
-
 MAT.ts.86.15 <- plot(tulane_pollen[2]$sample.meta$age, tulane.temp.86.15$fit[,1], type = "o", main = 'MAT 1986-2015', xlab = "Ages", ylab = "Predicted Temps (˚Celsius)")
 
 #Model for WA 51.80
@@ -160,28 +155,92 @@ wapls.tulane.temp86.15 <- predict(cross.wapls.86.15, newdata = tulane_counts_fin
 WAPLS.ts.86.15 <- plot(tulane_pollen[2]$sample.meta$age, wapls.tulane.temp86.15$fit[,1], type = "o", main = 'WAPLS 1986-2015', xlab = 'Ages', ylab = 'Predicted Temps')
 
 
+# #use square root pollen percentages for each model(TF)???????
+# #keep Pollen_percentages where it is 
+# # Runs MAT on modern pollen percentages and 1951-80 30-year mean
+# MAT.tempavg51.80 <- rioja::MAT(Pollen_percentages, tempavg51.80, lean = FALSE)
+# # Plots MAT results
+# plot(MAT.tempavg51.80)
+# # cross-validates the MAT using the leave-one-out technique
+# cv.tempavg51.80.mat.model <- rioja::crossval(MAT.tempavg51.80, cv.method='lgo', verbose=FALSE)
+# plot(cv.tempavg51.80.mat.model)
+
+# # Runs MAT on modern pollen percentages and 1986-2015 30-year mean
+# MAT.tempavg86.15 <- rioja::MAT(Pollen_percentages, tempavg86.15, lean = FALSE)
+# # Plots MAT results
+# plot(MAT.tempavg86.15)
+# # cross-validates the MAT using the leave-one-out technique
+# cv.tempavg86.15.mat.model <- rioja::crossval(MAT.tempavg86.15, cv.method='lgo', verbose=FALSE)
+# plot(cv.tempavg86.15.mat.model)
 
 
+#data frame to compare model temps
+mat.temps.86.15 <- tulane.temp.86.15$fit[,1]
+mat.temps.51.80 <- tulane.temp.51.80$fit[,1]
+wapls.temps.51.80 <- wapls.tulane.temp51.80$fit[,1]
+wapls.temps.86.15 <- wapls.tulane.temp86.15$fit[,1]
+wa.temps.51.80 <- wa.tulane.temp.51.80$fit[,1]
+wa.temps.86.15 <- wa.tulane.temp.86.15$fit[,1]
+tulane.times <- tulane_pollen[2]$sample.meta$age
+tulanetimetemps <- matrix(c(tulane.times, mat.temps.51.80 ,mat.temps.86.15, wapls.temps.51.80, wapls.temps.86.15, wa.temps.51.80, wa.temps.86.15), nrow = 191, ncol = 7)
+tulane.data <- as.data.frame(tulanetimetemps)
+tulane.data <- setNames(tulane.data, c("Time", "MAT5180", "MAT 86-15", "WAPLS 51-80", "WAPLS 86-15", "WA5180", "WA 86-15"))
 
+#Crystal Scatter Plots 
 
+library(ggplot2)
+#MAT vs WA 1951-1980 Temps
+ggplot(tulane.data, aes(x=mat.temps.51.80, y=wa.temps.51.80)) + geom_point() + 
+  geom_smooth(method = lm) + 
+  labs(title="MAT vs WA 1951-1980",
+       x="MAT Temps", y = "WA Temps")
 
+#MAT vs WAPLS 1951-1980 Temps
+ggplot(tulane.data, aes(x=mat.temps.51.80, y=wapls.temps.51.80)) + geom_point() + 
+  geom_smooth(method = lm) + 
+  labs(title="MAT vs WAPLS 1951-1980",
+       x="MAT Temps", y = "WAPLS Temps")
 
-#use square root pollen percentages for each model(TF)???????
-#keep Pollen_percentages where it is 
-# Runs MAT on modern pollen percentages and 1951-80 30-year mean
-MAT.tempavg51.80 <- rioja::MAT(Pollen_percentages, tempavg51.80, lean = FALSE)
-# Plots MAT results
-plot(MAT.tempavg51.80)
-# cross-validates the MAT using the leave-one-out technique
-cv.tempavg51.80.mat.model <- rioja::crossval(MAT.tempavg51.80, cv.method='lgo', verbose=FALSE)
-plot(cv.tempavg51.80.mat.model)
+#WA vs WAPLS 1951-1980 Temps
+ggplot(tulane.data, aes(x=wapls.temps.51.80, y=wa.temps.51.80)) + geom_point() + 
+  geom_smooth(method = lm) + 
+  labs(title="WAPLS vs WA 1951-1980",
+       x="WAPLS Temps", y = "WA Temps")
 
+#MAT vs WA 1986-2015 Temps
+ggplot(tulane.data, aes(x=mat.temps.86.15, y=wa.temps.86.15)) + geom_point() + 
+  geom_smooth(method = lm) + 
+  labs(title="MAT vs WA 1986-2015",
+       x="MAT Temps", y = "WA Temps")
 
-# Runs MAT on modern pollen percentages and 1986-2015 30-year mean
-MAT.tempavg86.15 <- rioja::MAT(Pollen_percentages, tempavg86.15, lean = FALSE)
-# Plots MAT results
-plot(MAT.tempavg86.15)
-# cross-validates the MAT using the leave-one-out technique
-cv.tempavg86.15.mat.model <- rioja::crossval(MAT.tempavg86.15, cv.method='lgo', verbose=FALSE)
-plot(cv.tempavg86.15.mat.model)
+#MAT vs WAPLS 1986-2015 Temps
+ggplot(tulane.data, aes(x=mat.temps.86.15, y=wapls.temps.86.15)) + geom_point() + 
+  geom_smooth(method = lm) + 
+  labs(title="MAT vs WAPLS 1986-2015",
+       x="MAT Temps", y = "WAPLS Temps")
+
+#WA vs WAPLS 1986-2015
+ggplot(tulane.data, aes(x=wapls.temps.86.15, y=wa.temps.86.15)) + geom_point() + 
+  geom_smooth(method = lm) + 
+  labs(title="WAPLS vs WA 1986-2015",
+       x="WAPLS Temps", y = "WA Temps")
+
+#WA 1951-1980 vs WA 1986-2015 
+ggplot(tulane.data, aes(x=wa.temps.51.80, y=wa.temps.86.15)) + geom_point() + 
+  geom_smooth(method = lm) + 
+  labs(title="WA 51-80 vs WA 86-15",
+       x="WA 51.80 Temps", y = "WA 86.15 Temps")
+
+#WAPLS 1951-1980 vs WAPLS 1986-2015
+ggplot(tulane.data, aes(x=wapls.temps.51.80, y=wapls.temps.86.15)) + geom_point() + 
+  geom_smooth(method = lm) + 
+  labs(title="WAPLS 51-80 vs WAPLS 86-15",
+       x="WAPLS 51.80 Temps", y = "WAPLS 86.15 Temps")
+
+#MAT 1951-1980 vs MAT 1986-2015 
+ggplot(tulane.data, aes(x=mat.temps.51.80, y=mat.temps.86.15)) + geom_point() + 
+  geom_smooth(method = lm) + 
+  labs(title="MAT 51-80 vs MAT 86-15",
+       x="MAT 51.80 Temps", y = "MAT 86.15 Temps")
+
 

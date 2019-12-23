@@ -87,14 +87,16 @@ map_USCan <- map_data("world", region = USCanada)
 
 gg <- ggplot(worldmap, aes(x = long, y = lat)) +
                geom_polygon(aes(group = group), color = "black", alpha = 0) + 
-  geom_point(data = anom.temps, aes(x = long, y = lat, color = temp.anom)) + 
+  geom_point(data = anom.temps, aes(x = long, y = lat, color = temp.anom)) +
+  scale_color_gradient2(low="blue", mid="white", high="red") +
   coord_cartesian(xlim = c(-40, -175), ylim = c(20, 85)) #specifies a region
 gg
-
+                      
 #Jan86.15.mean - Jan51.80.mean
 gg.january <- ggplot(worldmap, aes(x = long, y = lat)) +
   geom_polygon(aes(group = group), color = "black", alpha = 0) +
   geom_point(data = jan.anom, aes(x = long, y = lat, color = januaryanom)) +
+  scale_color_gradient2(low="blue", mid="white", high="red") +
   coord_cartesian(xlim = c(-40, -175), ylim = c(20, 85)) 
 gg.january
 
@@ -102,7 +104,7 @@ gg.january
 gg.july <- ggplot(worldmap, aes(x = long, y = lat)) +
   geom_polygon(aes(group = group), color = "black", alpha = 0) +
   geom_point(data = jul.anom, aes(x = long, y = lat, color = julyanom)) +
-  scale_color_gradient2() + 
+  scale_color_gradient2(low="blue", mid="white", high="red") + 
   coord_cartesian(xlim = c(-40, -175), ylim = c(20, 85))
 gg.july
 
